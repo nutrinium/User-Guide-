@@ -9,15 +9,21 @@ function ViewerLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
-        <div className="relative mx-auto flex h-20 items-center px-4 sm:h-24 sm:px-6 lg:max-w-7xl">
+      <header className="sticky top-0 z-40 border-b border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950">
+        <div
+          className="h-1 w-full"
+          style={{
+            background: 'linear-gradient(90deg, #FF6B2C, #E91E8C, #7B2FF7, #2563EB)',
+          }}
+        />
+        <div className="relative mx-auto flex h-20 items-center px-4 sm:h-[4.5rem] sm:px-6 lg:max-w-7xl">
           <Link to="/viewer" className="shrink-0">
-            <ExtropeakLogo className="h-10 w-auto object-contain sm:h-12" />
+            <ExtropeakLogo className="h-10 w-auto object-contain sm:h-11" />
           </Link>
 
           <Link
             to="/viewer"
-            className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-base font-bold text-slate-900 dark:text-white sm:text-xl"
+            className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-base font-bold text-white sm:text-xl"
           >
             User Guide Application
           </Link>
@@ -26,12 +32,12 @@ function ViewerLayout() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="rounded-lg border border-slate-200 p-2.5 text-slate-500 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-white dark:hover:bg-slate-800"
+              className="rounded-lg border border-slate-700 bg-white/5 p-2.5 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
               aria-label="Toggle theme"
             >
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <UserProfileMenu />
+            <UserProfileMenu darkNav />
           </div>
         </div>
       </header>

@@ -4,7 +4,7 @@ import { ChevronDown, Settings, LogOut } from 'lucide-react'
 import { useRole } from '../../context/RoleContext'
 import AdminLoginModal from './AdminLoginModal'
 
-function UserProfileMenu() {
+function UserProfileMenu({ darkNav = false }) {
   const { isAdmin, loginAsAdmin, logoutAdmin } = useRole()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -54,7 +54,11 @@ function UserProfileMenu() {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+          className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors ${
+            darkNav
+              ? 'border-slate-700 bg-white/5 hover:bg-white/10'
+              : 'border-slate-200 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800/50 dark:hover:bg-slate-800'
+          }`}
           aria-expanded={open}
           aria-haspopup="true"
         >
@@ -63,12 +67,16 @@ function UserProfileMenu() {
           >
             {initials}
           </div>
-          <span className="hidden text-sm font-medium text-slate-700 dark:text-white sm:inline">
+          <span
+            className={`hidden text-sm font-medium sm:inline ${
+              darkNav ? 'text-slate-200' : 'text-slate-700 dark:text-white'
+            }`}
+          >
             {label}
           </span>
           <ChevronDown
             size={16}
-            className={`text-slate-400 transition-transform dark:text-white ${open ? 'rotate-180' : ''}`}
+            className={`transition-transform ${darkNav ? 'text-slate-400' : 'text-slate-400 dark:text-white'} ${open ? 'rotate-180' : ''}`}
           />
         </button>
 
