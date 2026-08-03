@@ -51,19 +51,19 @@ function Applications() {
     setModalOpen(true)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
     if (editing) {
-      updateApplication(editing.id, form)
+      await updateApplication(editing.id, form)
     } else {
-      addApplication(form)
+      await addApplication(form)
     }
     setModalOpen(false)
   }
 
-  const handleDelete = (id) => {
-    deleteApplication(id)
+  const handleDelete = async (id) => {
+    await deleteApplication(id)
     setDeleteConfirm(null)
   }
 
@@ -139,7 +139,7 @@ function Applications() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => updateApplication(app.id, { isActive: !app.isActive })}
+                    onClick={() => void updateApplication(app.id, { isActive: !app.isActive })}
                   >
                     {app.isActive ? 'Deactivate' : 'Activate'}
                   </Button>

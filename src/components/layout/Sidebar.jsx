@@ -9,6 +9,7 @@ import {
   Image,
   Link2,
   AlignLeft,
+  Key,
 } from 'lucide-react'
 import ExtropeakLogo from './ExtropeakLogo'
 
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/photos', icon: Image, label: 'Photos', color: '#10b981' },
   { to: '/documents', icon: Link2, label: 'Linked Documents', color: '#6366f1' },
   { to: '/content', icon: AlignLeft, label: 'Content', color: '#ec4899' },
+  { to: '/api-keys', icon: Key, label: 'API Keys', color: '#a855f7' },
   { to: '/settings', icon: Settings, label: 'Settings', color: '#64748b' },
 ]
 

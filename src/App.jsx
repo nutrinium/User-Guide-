@@ -12,6 +12,7 @@ import Guides from './pages/Guides'
 import GuideEditorPage from './pages/GuideEditorPage'
 import MediaLibrary from './pages/MediaLibrary'
 import Settings from './pages/Settings'
+import ApiKeys from './pages/ApiKeys'
 import ViewerHome from './pages/viewer/ViewerHome'
 import ViewerApp from './pages/viewer/ViewerApp'
 import ViewerGuide from './pages/viewer/ViewerGuide'
@@ -42,10 +43,11 @@ function App() {
                   <Route path="guides" element={<Guides />} />
                   <Route path="guides/new" element={<GuideEditorPage />} />
                   <Route path="guides/edit/:id" element={<GuideEditorPage />} />
-                  <Route path="videos" element={<MediaLibrary />} />
-                  <Route path="photos" element={<MediaLibrary />} />
-                  <Route path="documents" element={<MediaLibrary />} />
-                  <Route path="content" element={<MediaLibrary />} />
+                  <Route path="videos" element={<MediaLibrary key="videos" />} />
+                  <Route path="photos" element={<MediaLibrary key="photos" />} />
+                  <Route path="documents" element={<MediaLibrary key="documents" />} />
+                  <Route path="content" element={<MediaLibrary key="content" />} />
+                  <Route path="api-keys" element={<ApiKeys />} />
                   <Route path="settings" element={<Settings />} />
                 </Route>
               </Route>

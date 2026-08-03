@@ -79,19 +79,19 @@ function Modules() {
     setModalOpen(true)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim() || !form.applicationId) return
     if (editing) {
-      updateModule(editing.id, form)
+      await updateModule(editing.id, form)
     } else {
-      addModule(form)
+      await addModule(form)
     }
     setModalOpen(false)
   }
 
-  const handleDelete = (id) => {
-    deleteModule(id)
+  const handleDelete = async (id) => {
+    await deleteModule(id)
     setDeleteConfirm(null)
   }
 

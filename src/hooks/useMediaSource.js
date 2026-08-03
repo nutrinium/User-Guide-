@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getMediaFile } from '../utils/mediaDb'
+import { getMediaFile as getLocalMediaFile } from '../utils/mediaDb'
+import { api } from '../utils/api'
 
 export function useMediaSource(item) {
   const [src, setSrc] = useState(null)
@@ -16,8 +17,14 @@ export function useMediaSource(item) {
           return
         }
         if (item?.id) {
-          const data = await getMediaFile(item.id)
-          if (!cancelled) setSrc(data)
+          try {
+            const { fileData } = await api.getMediaFile(item.id)
+            if (!cancelled) setSrc(fileData)
+            return
+          } catch {
+            const local = await getLocalMediaFile(item.id)
+            if (!cancelled) setSrc(local)
+          }
         }
       } catch {
         if (!cancelled) setSrc(null)
@@ -37,6 +44,13 @@ export function useMediaSource(item) {
 
 export async function resolveMediaSource(item) {
   if (item?.fileData) return item.fileData
-  if (item?.id) return getMediaFile(item.id)
+  if (item?.id) {
+    try {
+      const { fileData } = await api.getMediaFile(item.id)
+      return fileData
+    } catch {
+      return getLocalMediaFile(item.id)
+    }
+  }
   return null
 }

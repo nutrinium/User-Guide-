@@ -1,110 +1,82 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { generateId, loadAndMigrateData, saveData } from '../utils/storage'
-import { saveMediaFile, deleteMediaFile, deleteMediaFiles } from '../utils/mediaDb'
+import { api } from '../utils/api'
 
 const GuideContext = createContext(null)
+
+const EMPTY_DATA = {
+  applications: [],
+  modules: [],
+  guides: [],
+  media: [],
+}
 
 export function GuideProvider({ children }) {
   const [data, setData] = useState(null)
   const [ready, setReady] = useState(false)
+  const [error, setError] = useState(null)
+
+  const reload = async () => {
+    const payload = await api.bootstrap()
+    setData(payload)
+    return payload
+  }
 
   useEffect(() => {
-    loadAndMigrateData()
-      .then(setData)
+    api
+      .bootstrap()
+      .then((payload) => {
+        setData(payload)
+        setError(null)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setData(EMPTY_DATA)
+      })
       .finally(() => setReady(true))
   }, [])
 
-  useEffect(() => {
-    if (!ready || !data) return
-    try {
-      saveData(data)
-    } catch {
-      // save errors handled at upload time
-    }
-  }, [data, ready])
-
-  const addApplication = (application) => {
-    const now = new Date().toISOString()
-    const newApp = {
-      id: generateId(),
-      name: application.name,
-      description: application.description || '',
-      icon: application.icon || 'LayoutGrid',
-      color: application.color || '#2563eb',
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    }
-    setData((prev) => ({ ...prev, applications: [...prev.applications, newApp] }))
-    return newApp
+  const addApplication = async (application) => {
+    const created = await api.createApplication(application)
+    setData((prev) => ({ ...prev, applications: [...prev.applications, created] }))
+    return created
   }
 
-  const updateApplication = (id, updates) => {
+  const updateApplication = async (id, updates) => {
+    const current = data.applications.find((a) => a.id === id)
+    const updated = await api.updateApplication(id, { ...current, ...updates })
     setData((prev) => ({
       ...prev,
-      applications: prev.applications.map((a) =>
-        a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a
-      ),
+      applications: prev.applications.map((a) => (a.id === id ? updated : a)),
     }))
   }
 
   const deleteApplication = async (id) => {
-    const moduleIds = data.modules.filter((m) => m.applicationId === id).map((m) => m.id)
-    const directGuideIds = data.guides
-      .filter((g) => g.applicationId === id && !g.moduleId)
-      .map((g) => g.id)
-    const guideIdsToRemove = [
-      ...data.guides.filter((g) => moduleIds.includes(g.moduleId)).map((g) => g.id),
-      ...directGuideIds,
-    ]
-    const mediaIds = data.media
-      .filter(
-        (m) =>
-          moduleIds.includes(m.moduleId) ||
-          (m.applicationId === id && !m.moduleId) ||
-          guideIdsToRemove.includes(m.guideId)
-      )
-      .map((m) => m.id)
-    await deleteMediaFiles(mediaIds)
+    await api.deleteApplication(id)
     setData((prev) => ({
       applications: prev.applications.filter((a) => a.id !== id),
       modules: prev.modules.filter((m) => m.applicationId !== id),
-      guides: prev.guides.filter(
-        (g) => !moduleIds.includes(g.moduleId) && !(g.applicationId === id && !g.moduleId)
-      ),
-      media: prev.media.filter((m) => !mediaIds.includes(m.id)),
+      guides: prev.guides.filter((g) => g.applicationId !== id),
+      media: prev.media.filter((m) => m.applicationId !== id),
     }))
   }
 
-  const addModule = (module) => {
-    const now = new Date().toISOString()
-    const newModule = {
-      id: generateId(),
-      applicationId: module.applicationId || '',
-      name: module.name,
-      description: module.description || '',
-      icon: module.icon || 'FileText',
-      color: module.color || '#2563eb',
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    }
-    setData((prev) => ({ ...prev, modules: [...prev.modules, newModule] }))
-    return newModule
+  const addModule = async (module) => {
+    const created = await api.createModule(module)
+    setData((prev) => ({ ...prev, modules: [...prev.modules, created] }))
+    return created
   }
 
-  const updateModule = (id, updates) => {
+  const updateModule = async (id, updates) => {
+    const current = data.modules.find((m) => m.id === id)
+    const updated = await api.updateModule(id, { ...current, ...updates })
     setData((prev) => ({
       ...prev,
-      modules: prev.modules.map((m) =>
-        m.id === id ? { ...m, ...updates, updatedAt: new Date().toISOString() } : m
-      ),
+      modules: prev.modules.map((m) => (m.id === id ? updated : m)),
     }))
   }
 
   const deleteModule = async (id) => {
-    const mediaIds = data.media.filter((m) => m.moduleId === id).map((m) => m.id)
-    await deleteMediaFiles(mediaIds)
+    await api.deleteModule(id)
     setData((prev) => ({
       ...prev,
       modules: prev.modules.filter((m) => m.id !== id),
@@ -113,53 +85,28 @@ export function GuideProvider({ children }) {
     }))
   }
 
-  const addGuide = (guide) => {
-    const now = new Date().toISOString()
+  const addGuide = async (guide) => {
     const moduleId = guide.moduleId || ''
-    const applicationId =
-      guide.applicationId ||
-      (moduleId ? data.modules.find((m) => m.id === moduleId)?.applicationId : '') ||
-      ''
+    const applicationId = guide.applicationId || ''
     const siblingGuides = moduleId
       ? data.guides.filter((g) => g.moduleId === moduleId)
       : data.guides.filter((g) => g.applicationId === applicationId && !g.moduleId)
-    const newGuide = {
-      id: generateId(),
-      applicationId,
-      moduleId,
-      title: guide.title,
-      description: guide.description || '',
-      sections: guide.sections || [],
-      status: guide.status || 'draft',
-      order: siblingGuides.length,
-      createdAt: now,
-      updatedAt: now,
-      publishedAt: guide.status === 'published' ? now : null,
-    }
-    setData((prev) => ({ ...prev, guides: [...prev.guides, newGuide] }))
-    return newGuide
+    const created = await api.createGuide({ ...guide, order: siblingGuides.length })
+    setData((prev) => ({ ...prev, guides: [...prev.guides, created] }))
+    return created
   }
 
-  const updateGuide = (id, updates) => {
+  const updateGuide = async (id, updates) => {
+    const current = data.guides.find((g) => g.id === id)
+    const updated = await api.updateGuide(id, { ...current, ...updates })
     setData((prev) => ({
       ...prev,
-      guides: prev.guides.map((g) => {
-        if (g.id !== id) return g
-        const updated = { ...g, ...updates, updatedAt: new Date().toISOString() }
-        if (updates.status === 'published' && g.status !== 'published') {
-          updated.publishedAt = new Date().toISOString()
-        }
-        if (updates.status === 'draft') {
-          updated.publishedAt = null
-        }
-        return updated
-      }),
+      guides: prev.guides.map((g) => (g.id === id ? updated : g)),
     }))
   }
 
   const deleteGuide = async (id) => {
-    const mediaIds = data.media.filter((m) => m.guideId === id).map((m) => m.id)
-    await deleteMediaFiles(mediaIds)
+    await api.deleteGuide(id)
     setData((prev) => ({
       ...prev,
       guides: prev.guides.filter((g) => g.id !== id),
@@ -168,54 +115,25 @@ export function GuideProvider({ children }) {
   }
 
   const addMedia = async (item) => {
-    const now = new Date().toISOString()
-    const id = generateId()
-    const fileData = item.fileData || ''
-
-    if (fileData) {
-      await saveMediaFile(id, fileData)
-    }
-
-    const newItem = {
-      id,
-      applicationId: item.applicationId || '',
-      moduleId: item.moduleId || '',
-      guideId: item.guideId || '',
-      sectionId: item.sectionId || '',
-      guideTitle: item.guideTitle || '',
-      sectionTitle: item.sectionTitle || '',
-      type: item.type,
-      name: item.name,
-      description: item.description || '',
-      fileName: item.fileName || '',
-      fileType: item.fileType || '',
-      fileSize: item.fileSize || 0,
-      contentText: item.contentText || '',
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    setData((prev) => ({ ...prev, media: [...prev.media, newItem] }))
-    return newItem
+    const created = await api.createMedia(item)
+    setData((prev) => ({ ...prev, media: [...prev.media, created] }))
+    return created
   }
 
   const updateMedia = async (id, updates) => {
-    if (updates.fileData) {
-      await saveMediaFile(id, updates.fileData)
-    }
-
+    const current = data.media.find((m) => m.id === id)
+    const { fileData, ...rest } = updates
+    const payload = { ...current, ...rest }
+    if (fileData) payload.fileData = fileData
+    const updated = await api.updateMedia(id, payload)
     setData((prev) => ({
       ...prev,
-      media: prev.media.map((m) => {
-        if (m.id !== id) return m
-        const { fileData, ...rest } = updates
-        return { ...m, ...rest, updatedAt: new Date().toISOString() }
-      }),
+      media: prev.media.map((m) => (m.id === id ? updated : m)),
     }))
   }
 
   const deleteMedia = async (id) => {
-    await deleteMediaFile(id)
+    await api.deleteMedia(id)
     setData((prev) => ({
       ...prev,
       media: prev.media.filter((m) => m.id !== id),
@@ -277,8 +195,30 @@ export function GuideProvider({ children }) {
 
   if (!ready || !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <p className="text-sm text-slate-500">Loading...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100 dark:bg-slate-950">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Connecting to database...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100 px-4 dark:bg-slate-950">
+        <p className="text-center text-sm font-medium text-red-600">Database connection failed</p>
+        <p className="mt-2 max-w-md text-center text-xs text-slate-500">{error}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setReady(false)
+            reload()
+              .then(() => setError(null))
+              .catch((err) => setError(err.message))
+              .finally(() => setReady(true))
+          }}
+          className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+        >
+          Retry
+        </button>
       </div>
     )
   }
@@ -291,6 +231,7 @@ export function GuideProvider({ children }) {
         guides: data.guides,
         media: data.media,
         stats,
+        reload,
         addApplication,
         updateApplication,
         deleteApplication,

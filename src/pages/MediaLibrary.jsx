@@ -348,8 +348,8 @@ function ModuleMediaSection({
   mod,
   items,
   mediaType,
+  moduleGuides,
   getApplicationById,
-  getGuidesByModule,
   getGuideById,
   openCreate,
   openEdit,
@@ -357,19 +357,18 @@ function ModuleMediaSection({
   setPlayingVideo,
 }) {
   const app = getApplicationById(mod.applicationId)
-  const moduleGuides = getGuidesByModule(mod.id)
+  const guideIdsKey = moduleGuides.map((g) => `${g.id}:${g.updatedAt}`).join('|')
   const [selectedGuideId, setSelectedGuideId] = useState(
     () => moduleGuides[0]?.id || ''
   )
 
   useEffect(() => {
     setSelectedGuideId((current) => {
-      const guides = getGuidesByModule(mod.id)
-      if (guides.length === 0) return ''
-      if (guides.some((g) => g.id === current)) return current
-      return guides[0].id
+      if (moduleGuides.length === 0) return ''
+      if (moduleGuides.some((g) => g.id === current)) return current
+      return moduleGuides[0].id
     })
-  }, [mod.id, getGuidesByModule])
+  }, [mod.id, guideIdsKey])
 
   const selectedGuideGroup = selectedGuideId
     ? buildGuideWithAllSections(selectedGuideId, items, getGuideById)
@@ -501,24 +500,23 @@ function AppDirectMediaSection({
   app,
   items,
   mediaType,
-  getDirectGuidesByApplication,
+  appGuides,
   getGuideById,
   openCreate,
   openEdit,
   setDeleteConfirm,
   setPlayingVideo,
 }) {
-  const appGuides = getDirectGuidesByApplication(app.id)
+  const guideIdsKey = appGuides.map((g) => `${g.id}:${g.updatedAt}`).join('|')
   const [selectedGuideId, setSelectedGuideId] = useState(() => appGuides[0]?.id || '')
 
   useEffect(() => {
     setSelectedGuideId((current) => {
-      const guideList = getDirectGuidesByApplication(app.id)
-      if (guideList.length === 0) return ''
-      if (guideList.some((g) => g.id === current)) return current
-      return guideList[0].id
+      if (appGuides.length === 0) return ''
+      if (appGuides.some((g) => g.id === current)) return current
+      return appGuides[0].id
     })
-  }, [app.id, getDirectGuidesByApplication])
+  }, [app.id, guideIdsKey])
 
   const selectedGuideGroup = selectedGuideId
     ? buildGuideWithAllSections(selectedGuideId, items, getGuideById)
@@ -1015,7 +1013,7 @@ function MediaLibrary() {
                   app={app}
                   items={directItems}
                   mediaType={mediaType}
-                  getDirectGuidesByApplication={getDirectGuidesByApplication}
+                  appGuides={getDirectGuidesByApplication(app.id)}
                   getGuideById={getGuideById}
                   openCreate={openCreate}
                   openEdit={openEdit}
@@ -1029,8 +1027,8 @@ function MediaLibrary() {
                   mod={mod}
                   items={items}
                   mediaType={mediaType}
+                  moduleGuides={getGuidesByModule(mod.id)}
                   getApplicationById={getApplicationById}
-                  getGuidesByModule={getGuidesByModule}
                   getGuideById={getGuideById}
                   openCreate={openCreate}
                   openEdit={openEdit}
@@ -1050,8 +1048,8 @@ function MediaLibrary() {
                   mod={mod}
                   items={items}
                   mediaType={mediaType}
+                  moduleGuides={getGuidesByModule(mod.id)}
                   getApplicationById={getApplicationById}
-                  getGuidesByModule={getGuidesByModule}
                   getGuideById={getGuideById}
                   openCreate={openCreate}
                   openEdit={openEdit}

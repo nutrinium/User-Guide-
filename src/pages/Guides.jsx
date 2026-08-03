@@ -141,13 +141,13 @@ function Guides() {
     return !g.applicationId
   })
 
-  const handleDelete = (id) => {
-    deleteGuide(id)
+  const handleDelete = async (id) => {
+    await deleteGuide(id)
     setDeleteConfirm(null)
   }
 
-  const togglePublish = (guide) => {
-    updateGuide(guide.id, {
+  const togglePublish = async (guide) => {
+    await updateGuide(guide.id, {
       status: guide.status === 'published' ? 'draft' : 'published',
     })
   }

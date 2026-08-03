@@ -35,21 +35,24 @@ function GuideEditorPage() {
   })
 
   useEffect(() => {
-    if (existing) {
-      setForm({
-        applicationId: existing.applicationId || '',
-        moduleId: existing.moduleId || '',
-        title: existing.title,
-        description: existing.description,
-        status: existing.status,
-        sections: existing.sections.length
-          ? [...existing.sections].sort((a, b) => a.order - b.order)
-          : [emptySection()],
-      })
-    } else if (activeApps.length > 0 && !form.applicationId) {
-      setForm((f) => ({ ...f, applicationId: activeApps[0].id }))
+    if (!isEditing) {
+      if (activeApps.length > 0) {
+        setForm((f) => (f.applicationId ? f : { ...f, applicationId: activeApps[0].id }))
+      }
+      return
     }
-  }, [existing, activeApps])
+    if (!existing) return
+    setForm({
+      applicationId: existing.applicationId || '',
+      moduleId: existing.moduleId || '',
+      title: existing.title,
+      description: existing.description,
+      status: existing.status,
+      sections: existing.sections.length
+        ? [...existing.sections].sort((a, b) => a.order - b.order)
+        : [emptySection()],
+    })
+  }, [isEditing, id, existing?.updatedAt, applications.length])
 
   const appModules = form.applicationId
     ? modules.filter((m) => m.applicationId === form.applicationId && m.isActive)
@@ -88,7 +91,7 @@ function GuideEditorPage() {
     }))
   }
 
-  const handleSave = (publish = false) => {
+  const handleSave = async (publish = false) => {
     if (!form.applicationId || !form.title.trim()) return
     const payload = {
       ...form,
@@ -99,9 +102,9 @@ function GuideEditorPage() {
         .map((s, i) => ({ ...s, order: i })),
     }
     if (isEditing) {
-      updateGuide(id, payload)
+      await updateGuide(id, payload)
     } else {
-      const created = addGuide(payload)
+      const created = await addGuide(payload)
       navigate(`/guides/edit/${created.id}`, { replace: true })
       return
     }
