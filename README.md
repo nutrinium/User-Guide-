@@ -61,6 +61,7 @@ PORT=3001
 ```bash
 npm run dev:all
 ```
+Uses a built-in Node script (no extra tools required).
 
 **Option B — two terminals:**
 
