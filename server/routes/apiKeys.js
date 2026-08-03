@@ -5,8 +5,6 @@ import { requireAdminSecret } from '../middleware/adminAuth.js'
 
 const router = express.Router()
 
-router.use(requireAdminSecret)
-
 router.get('/', async (_req, res) => {
   try {
     const [rows] = await pool.query(
@@ -20,7 +18,7 @@ router.get('/', async (_req, res) => {
         keyPrefix: row.key_prefix,
         applicationId: row.application_id,
         permission: row.permission,
-        isActive: Boolean(row.is_active),
+        isActive: Number(row.is_active) === 1,
         createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
         expiresAt: row.expires_at ? new Date(row.expires_at).toISOString() : null,
         lastUsedAt: row.last_used_at ? new Date(row.last_used_at).toISOString() : null,
@@ -31,7 +29,7 @@ router.get('/', async (_req, res) => {
   }
 })
 
-router.post('/', async (req, res) => {
+router.post('/', requireAdminSecret, async (req, res) => {
   try {
     const now = new Date().toISOString()
     const { name, applicationId, expiresAt } = req.body
@@ -70,7 +68,7 @@ router.post('/', async (req, res) => {
   }
 })
 
-router.post('/token', async (req, res) => {
+router.post('/token', requireAdminSecret, async (req, res) => {
   try {
     const { applicationId, expiresIn } = req.body
     const token = issueViewJwt({ applicationId, expiresIn })
@@ -85,7 +83,7 @@ router.post('/token', async (req, res) => {
   }
 })
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdminSecret, async (req, res) => {
   try {
     await pool.query(`UPDATE api_keys SET is_active = 0 WHERE id = ?`, [req.params.id])
     res.status(204).end()

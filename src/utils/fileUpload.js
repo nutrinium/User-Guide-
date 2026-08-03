@@ -1,9 +1,10 @@
 import { resolveMediaSource } from '../hooks/useMediaSource'
 
+/** Max raw file size before upload. Videos are stored as base64 in MySQL (~33% larger on the wire). */
 export const FILE_LIMITS = {
-  video: 20 * 1024 * 1024,
-  photo: 5 * 1024 * 1024,
-  document: 10 * 1024 * 1024,
+  video: 100 * 1024 * 1024, // 100 MB
+  photo: 10 * 1024 * 1024, // 10 MB
+  document: 25 * 1024 * 1024, // 25 MB
 }
 
 export const ACCEPT_TYPES = {

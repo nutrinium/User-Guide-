@@ -22,6 +22,7 @@ import { DynamicIcon } from '../utils/icons'
 import { MEDIA_TYPES } from '../utils/storage'
 import {
   ACCEPT_TYPES,
+  FILE_LIMITS,
   processUpload,
   formatFileSize,
   formatDate,
@@ -668,6 +669,8 @@ function MediaLibrary() {
   const activeModules = modules.filter((m) => m.isActive)
 
   const [search, setSearch] = useState('')
+  const [filterApp, setFilterApp] = useState('all')
+  const [filterModule, setFilterModule] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyForm)
@@ -679,6 +682,12 @@ function MediaLibrary() {
   const [uploadError, setUploadError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [playingVideo, setPlayingVideo] = useState(null)
+
+  useEffect(() => {
+    setFilterApp('all')
+    setFilterModule('all')
+    setSearch('')
+  }, [typeKey])
 
   if (!mediaConfig || !ROUTE_TYPES.includes(typeKey)) {
     return (
@@ -846,7 +855,14 @@ function MediaLibrary() {
       }
       setModalOpen(false)
     } catch (err) {
-      setUploadError(err.message || 'Upload failed. The file may be too large.')
+      const msg = err.message || 'Upload failed.'
+      setUploadError(
+        msg.includes('too large') || msg.includes('entity too large')
+          ? `${msg} Try a shorter video or compress the file before uploading.`
+          : msg.includes('Payload') || msg.includes('413')
+            ? `Upload too large for the server. Max video size is ${formatFileSize(FILE_LIMITS[mediaType] || FILE_LIMITS.video)}.`
+            : msg || 'Upload failed. The file may be too large.'
+      )
     } finally {
       setUploading(false)
     }
@@ -858,11 +874,13 @@ function MediaLibrary() {
   }
 
   const groupedByApp = activeApps
+    .filter((app) => filterApp === 'all' || app.id === filterApp)
     .map((app) => ({
       app,
       directItems: getMediaByApplicationDirect(app.id, mediaType).filter(filterItem),
       modules: activeModules
         .filter((m) => m.applicationId === app.id)
+        .filter((m) => filterModule === 'all' || m.id === filterModule)
         .map((mod) => ({
           mod,
           items: getMediaByModule(mod.id, mediaType).filter(filterItem),
@@ -874,18 +892,31 @@ function MediaLibrary() {
     .filter((g) => {
       const hasDirect =
         g.directItems.length > 0 || getDirectGuidesByApplication(g.app.id).length > 0
-      return hasDirect || g.modules.length > 0
+      return hasDirect || g.modules.length > 0 || filterApp === g.app.id
     })
+
+  const filterModules =
+    filterApp === 'all' ? activeModules : activeModules.filter((m) => m.applicationId === filterApp)
 
   const unassignedModules = activeModules
     .filter((m) => !m.applicationId)
+    .filter((m) => filterModule === 'all' || m.id === filterModule)
     .map((mod) => ({
       mod,
       items: getMediaByModule(mod.id, mediaType).filter(filterItem),
     }))
     .filter((m) => m.items.length > 0 || getGuidesByModule(m.mod.id).length > 0)
 
-  const hasVisibleContent = groupedByApp.length > 0 || unassignedModules.length > 0
+  const hasVisibleContent =
+    filterApp === 'all'
+      ? groupedByApp.length > 0 || unassignedModules.length > 0
+      : groupedByApp.some(
+          (g) =>
+            g.directItems.length > 0 ||
+            g.modules.some((m) => m.items.length > 0) ||
+            getDirectGuidesByApplication(g.app.id).length > 0 ||
+            g.modules.some((m) => getGuidesByModule(m.mod.id).length > 0)
+        )
 
   const totalCount =
     groupedByApp.reduce(
@@ -914,8 +945,8 @@ function MediaLibrary() {
           <h1 className="text-2xl font-bold text-slate-900">{mediaConfig.label}</h1>
           <p className="mt-1 text-sm text-slate-500">
             {isContent
-              ? 'Write section content — stored locally in your browser'
-              : 'Upload files by guide section — stored locally in your browser'}
+              ? 'Write section content linked to guides in the database'
+              : `Upload ${mediaConfig.label.toLowerCase()} by application, module, and guide section`}
           </p>
         </div>
         {activeApps.length > 0 && (
@@ -926,24 +957,55 @@ function MediaLibrary() {
         )}
       </div>
 
-      <div className="relative max-w-xl">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          placeholder={
-            isContent
-              ? 'Search content by title or text...'
-              : `Search ${mediaConfig.label.toLowerCase()} by name or file...`
-          }
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative max-w-md flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder={
+              isContent
+                ? 'Search content by title or text...'
+                : `Search ${mediaConfig.label.toLowerCase()} by name or file...`
+            }
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+        <select
+          value={filterApp}
+          onChange={(e) => {
+            setFilterApp(e.target.value)
+            setFilterModule('all')
+          }}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+        >
+          <option value="all">All Applications</option>
+          {applications.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filterModule}
+          onChange={(e) => setFilterModule(e.target.value)}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+        >
+          <option value="all">All Modules</option>
+          {filterModules.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <p className="text-sm text-slate-500">
-        Showing {totalCount} {isContent ? 'content blocks' : mediaConfig.label.toLowerCase()} ·
-        stored in browser{isContent ? '' : ' (IndexedDB)'}
+        Showing {totalCount} {isContent ? 'content blocks' : mediaConfig.label.toLowerCase()}
+        {filterApp !== 'all' && (
+          <> · {applications.find((a) => a.id === filterApp)?.name || 'Application'}</>
+        )}
       </p>
 
       {activeApps.length === 0 ? (
@@ -973,6 +1035,22 @@ function MediaLibrary() {
               Create Guide
             </Button>
           </Link>
+        </Card>
+      ) : !hasVisibleContent && (filterApp !== 'all' || filterModule !== 'all' || search) ? (
+        <Card className="py-16 text-center">
+          <h3 className="text-lg font-semibold text-slate-800">No matches for current filters</h3>
+          <p className="mt-2 text-sm text-slate-500">Try a different application, module, or search term.</p>
+          <Button
+            variant="outline"
+            className="mt-6"
+            onClick={() => {
+              setFilterApp('all')
+              setFilterModule('all')
+              setSearch('')
+            }}
+          >
+            Clear filters
+          </Button>
         </Card>
       ) : !hasVisibleContent ? (
         <Card className="py-16 text-center">
@@ -1216,10 +1294,12 @@ function MediaLibrary() {
                     Click to browse or drag & drop
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {mediaType === 'video' && 'MP4, WebM, MOV — max 20 MB · stored in browser'}
-                    {mediaType === 'photo' && 'JPG, PNG, GIF, WebP — max 5 MB · stored in browser'}
+                    {mediaType === 'video' &&
+                      `MP4, WebM, MOV — max ${formatFileSize(FILE_LIMITS.video)} · stored in database`}
+                    {mediaType === 'photo' &&
+                      `JPG, PNG, GIF, WebP — max ${formatFileSize(FILE_LIMITS.photo)} · stored in database`}
                     {mediaType === 'document' &&
-                      'PDF, DOC, XLS, PPT, TXT — max 10 MB · stored in browser'}
+                      `PDF, DOC, XLS, PPT, TXT — max ${formatFileSize(FILE_LIMITS.document)} · stored in database`}
                   </p>
                   <input
                     type="file"

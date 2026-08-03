@@ -14,8 +14,10 @@ dotenv.config({ path: join(__dirname, '..', '.env') })
 const app = express()
 const PORT = Number(process.env.PORT || 3001)
 
+const uploadBodyLimit = process.env.MAX_UPLOAD_BODY || '200mb'
+
 app.use(cors())
-app.use(express.json({ limit: '50mb' }))
+app.use(express.json({ limit: uploadBodyLimit }))
 
 app.use('/api', apiRouter)
 app.use('/api/v1/view', viewV1Router)

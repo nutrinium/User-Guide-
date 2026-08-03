@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   Plus,
   Key,
@@ -7,6 +8,7 @@ import {
   Check,
   AlertTriangle,
   Shield,
+  RefreshCw,
 } from 'lucide-react'
 import { useGuideContext } from '../context/GuideContext'
 import { api } from '../utils/api'
@@ -23,6 +25,7 @@ function formatDate(iso) {
 }
 
 function ApiKeys() {
+  const location = useLocation()
   const { applications } = useGuideContext()
   const [keys, setKeys] = useState([])
   const [loading, setLoading] = useState(true)
@@ -53,7 +56,7 @@ function ApiKeys() {
 
   useEffect(() => {
     loadKeys()
-  }, [loadKeys])
+  }, [loadKeys, location.pathname])
 
   const openCreate = () => {
     setForm(emptyForm)
@@ -104,6 +107,7 @@ function ApiKeys() {
 
   const activeKeys = keys.filter((k) => k.isActive)
   const revokedKeys = keys.filter((k) => !k.isActive)
+  const allKeys = [...activeKeys, ...revokedKeys]
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
@@ -114,10 +118,16 @@ function ApiKeys() {
             Issue read-only keys for external applications (MRR, Store, HR, etc.)
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus size={16} />
-          Generate API Key
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadKeys} disabled={loading}>
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus size={16} />
+            Generate API Key
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -172,7 +182,7 @@ function ApiKeys() {
 
       {loading ? (
         <Card className="py-16 text-center text-sm text-slate-500">Loading API keys…</Card>
-      ) : activeKeys.length === 0 && revokedKeys.length === 0 ? (
+      ) : allKeys.length === 0 ? (
         <Card className="py-16 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50">
             <Key size={28} className="text-violet-600" />
@@ -187,78 +197,65 @@ function ApiKeys() {
           </Button>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {activeKeys.length > 0 && (
-            <Card padding={false}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      <th className="px-6 py-3">Name</th>
-                      <th className="px-6 py-3">Key prefix</th>
-                      <th className="px-6 py-3">Scope</th>
-                      <th className="px-6 py-3">Created</th>
-                      <th className="px-6 py-3">Last used</th>
-                      <th className="px-6 py-3">Status</th>
-                      <th className="px-6 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {activeKeys.map((key) => (
-                      <tr key={key.id} className="hover:bg-slate-50/50">
-                        <td className="px-6 py-4 font-medium text-slate-900">{key.name}</td>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-600">
-                          {key.keyPrefix}…
-                        </td>
-                        <td className="px-6 py-4 text-slate-600">
-                          {getAppLabel(key.applicationId)}
-                        </td>
-                        <td className="px-6 py-4 text-slate-500">{formatDate(key.createdAt)}</td>
-                        <td className="px-6 py-4 text-slate-500">{formatDate(key.lastUsedAt)}</td>
-                        <td className="px-6 py-4">
-                          <Badge variant="success">Active</Badge>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setRevokeConfirm(key)}
-                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 size={14} />
-                            Revoke
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
-
-          {revokedKeys.length > 0 && (
-            <div>
-              <h2 className="mb-2 text-sm font-semibold text-slate-500">Revoked keys</h2>
-              <Card padding={false}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <tbody className="divide-y divide-slate-100">
-                      {revokedKeys.map((key) => (
-                        <tr key={key.id} className="opacity-60">
-                          <td className="px-6 py-3 font-medium text-slate-700">{key.name}</td>
-                          <td className="px-6 py-3 font-mono text-xs">{key.keyPrefix}…</td>
-                          <td className="px-6 py-3">
-                            <Badge variant="default">Revoked</Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </div>
-          )}
-        </div>
+        <Card padding={false}>
+          <div className="border-b border-slate-200 px-6 py-3 text-sm text-slate-500">
+            {activeKeys.length} active · {revokedKeys.length} revoked
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-6 py-3">Name</th>
+                  <th className="px-6 py-3">Key prefix</th>
+                  <th className="px-6 py-3">Scope</th>
+                  <th className="px-6 py-3">Created</th>
+                  <th className="px-6 py-3">Last used</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {allKeys.map((key) => (
+                  <tr
+                    key={key.id}
+                    className={`hover:bg-slate-50/50 ${!key.isActive ? 'opacity-60' : ''}`}
+                  >
+                    <td className="px-6 py-4 font-medium text-slate-900">{key.name}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-600">
+                      {key.keyPrefix}…
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {getAppLabel(key.applicationId)}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500">{formatDate(key.createdAt)}</td>
+                    <td className="px-6 py-4 text-slate-500">{formatDate(key.lastUsedAt)}</td>
+                    <td className="px-6 py-4">
+                      {key.isActive ? (
+                        <Badge variant="success">Active</Badge>
+                      ) : (
+                        <Badge variant="default">Revoked</Badge>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {key.isActive ? (
+                        <button
+                          type="button"
+                          onClick={() => setRevokeConfirm(key)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 size={14} />
+                          Revoke
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
       <Modal
