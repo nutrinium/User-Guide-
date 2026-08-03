@@ -1,13 +1,20 @@
 const BASE = import.meta.env.VITE_API_URL || '/api'
 
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  })
+  let res
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    })
+  } catch {
+    throw new Error(
+      'Cannot reach API server. Start it with: npm run dev:server (or npm run dev:all for both)'
+    )
+  }
 
   if (!res.ok) {
     let message = res.statusText
@@ -16,6 +23,10 @@ async function request(path, options = {}) {
       message = body.error || message
     } catch {
       /* ignore */
+    }
+    if (res.status === 502 || res.status === 503) {
+      message =
+        'API server is not running. Open a second terminal and run: npm run dev:server'
     }
     throw new Error(message)
   }

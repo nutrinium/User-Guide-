@@ -202,10 +202,36 @@ export function GuideProvider({ children }) {
   }
 
   if (error) {
+    const isApiDown =
+      error.includes('API server') ||
+      error.includes('Cannot reach') ||
+      error.includes('Bad Gateway') ||
+      error.includes('Failed to fetch')
+
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100 px-4 dark:bg-slate-950">
-        <p className="text-center text-sm font-medium text-red-600">Database connection failed</p>
+        <p className="text-center text-sm font-medium text-red-600">
+          {isApiDown ? 'Backend API is not running' : 'Database connection failed'}
+        </p>
         <p className="mt-2 max-w-md text-center text-xs text-slate-500">{error}</p>
+        {isApiDown && (
+          <div className="mt-4 max-w-md rounded-xl border border-slate-200 bg-white p-4 text-left text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900">
+            <p className="font-semibold text-slate-800 dark:text-white">Fix — run in project root:</p>
+            <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-100 p-3 font-mono dark:bg-slate-800">
+{`# Terminal 1
+npm run dev:server
+
+# Terminal 2
+npm run dev
+
+# Or one command (both):
+npm run dev:all`}
+            </pre>
+            <p className="mt-2">First time? Copy <code className="rounded bg-slate-100 px-1">.env.example</code> to{' '}
+              <code className="rounded bg-slate-100 px-1">.env</code> and set DB password.
+            </p>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => {

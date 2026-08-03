@@ -32,7 +32,17 @@ async function start() {
       console.log(`Public View API: http://localhost:${PORT}/api/v1/view`)
     })
   } catch (err) {
-    console.error('Failed to start server:', err.message)
+    console.error('\n❌ Failed to start server:', err.message)
+    if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+      console.error('\n→ Cannot reach MySQL. Check DB_HOST, DB_PORT, and firewall (port 3306).')
+    }
+    if (err.code === 'ER_ACCESS_DENIED_ERROR') {
+      console.error('\n→ MySQL rejected credentials. Copy .env.example to .env and set DB_USER / DB_PASSWORD.')
+    }
+    if (!process.env.DB_PASSWORD || process.env.DB_PASSWORD === 'your_password_here') {
+      console.error('\n→ Missing .env file or placeholder password. Run: cp .env.example .env')
+    }
+    console.error(`\n→ Config: ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 3306}/${process.env.DB_NAME || 'USER_GUIDE'}\n`)
     process.exit(1)
   }
 }
